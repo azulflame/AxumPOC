@@ -1,15 +1,11 @@
 use axum::Router;
-use axum::routing::get;
-
-fn old_main() {
-    println!("Hello, world!");
-}
-
+use axum::serve::Serve;
+use tokio::net::TcpListener;
+use AxumPOC::router;
 #[tokio::main]
 async fn main() {
-    let app = Router::new()
-        .route("/", get(|| async { "Hello, world!" }));
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let router = router();
+    let listener = TcpListener::bind("127.0.0.1:8080").await.expect("Failed to bind listener");
+    axum::serve(listener, router).await.expect("Failed to run server");
 }
+
