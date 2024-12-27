@@ -1,11 +1,15 @@
+use std::sync::Arc;
 use axum::body::Body;
 use axum::http::Request;
-use AxumPOC::router;
 use tower::ServiceExt;
+use AxumPOC::configuration::get_configuration;
+use AxumPOC::startup::{pool, router};
 
 #[tokio::test]
 async fn health_check_works() {
-    let router = router();
+    let settings = get_configuration().expect("Failed to read configuration");
+    let pool = pool(settings.database.connection_string());
+    let router = router(pool);
 
     let response = router.oneshot(Request::builder().uri("/healthcheck").body(Body::empty()).unwrap())
         .await

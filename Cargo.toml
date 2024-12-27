@@ -12,7 +12,12 @@ name = "AxumPOC"
 
 [dependencies]
 axum = "0.7.9"
-reqwest = "0.12.9"
 tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
-hyper = "1.5.2"
 tower = "0.5.2"
+serde = { version = "1.0.216", features = ["derive"] }
+diesel = { version = "2.2.6", default-features = false, features = ["postgres", "chrono", "r2d2", "uuid"] }
+config = "0.15.4"
+uuid = { version = "1.11.0", features = ["v4", "serde"] }
+chrono = "0.4.39"
+deadpool-diesel = { version = "0.6.1", features = ["postgres"] }
+test-context = "0.3.0"

@@ -1,11 +1,13 @@
-use axum::Router;
-use axum::serve::Serve;
 use tokio::net::TcpListener;
-use AxumPOC::router;
+use AxumPOC::configuration::get_configuration;
+use AxumPOC::startup::{pool, router};
+
 #[tokio::main]
 async fn main() {
-    let router = router();
-    let listener = TcpListener::bind("127.0.0.1:8080").await.expect("Failed to bind listener");
+    let settings = get_configuration().expect("Failed to read configuration");
+    let pool = pool(settings.database.connection_string());
+    let router = router(pool);
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", settings.app_port)).await.expect("Failed to bind listener");
     axum::serve(listener, router).await.expect("Failed to run server");
 }
 
