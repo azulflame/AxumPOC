@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use axum::{Extension, Router};
+use axum::{Router};
 use axum::handler::Handler;
 use axum::routing::{get, post};
 use deadpool_diesel::postgres::{Manager, Object};

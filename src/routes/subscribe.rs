@@ -1,11 +1,10 @@
-use std::sync::Arc;
 use axum::body::Body;
-use axum::{Extension, Form};
+use axum::{Form};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::Response;
-use chrono::{NaiveDateTime, Utc};
-use diesel::{Insertable, PgConnection, RunQueryDsl, SelectableHelper};
+use chrono::{Utc};
+use diesel::{RunQueryDsl, SelectableHelper};
 use uuid::Uuid;
 use crate::database::models::{NewSubscription, Subscription};
 use crate::database::schema::subscriptions::dsl::subscriptions;
@@ -24,7 +23,7 @@ pub async fn subscribe(
 
     let conn = pool.get().await.expect("Failed to get connection from pool");
 
-    let returning = conn.interact(|c| {
+    let _ = conn.interact(|c| {
 
 
         diesel::insert_into(subscriptions)
