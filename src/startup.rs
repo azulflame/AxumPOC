@@ -1,13 +1,14 @@
 use axum::{Router};
-use axum::handler::Handler;
 use axum::routing::{get, post};
 use deadpool_diesel::postgres::{Manager, Object};
+use tower_http::trace::TraceLayer;
 use crate::routes::{health_check, subscribe};
 pub fn router(pool: deadpool_diesel::Pool<Manager, Object>) -> Router {
 
     Router::new()
         .route("/healthcheck", get(health_check))
         .route("/subscribe", post(subscribe))
+        .layer(TraceLayer::new_for_http())
         .with_state(pool)
 }
 
