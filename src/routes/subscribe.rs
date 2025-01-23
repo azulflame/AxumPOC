@@ -1,16 +1,17 @@
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use axum::body::Body;
 use axum::{Form};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::Response;
-use chrono::{Utc};
-use deadpool_diesel::postgres::{Pool, PoolError};
-use diesel::{QueryResult, RunQueryDsl, SelectableHelper};
-use tracing::Instrument;
+use chrono::{NaiveDateTime, Utc};
+use sea_orm::{ActiveModelTrait, ActiveValue, DatabaseConnection, DbErr, EntityTrait, InsertResult};
+use sea_orm::prelude::DateTimeUtc;
+use sea_orm::sqlx::PgPool;
+use tracing::error;
 use uuid::Uuid;
-use crate::database::models::{NewSubscription, Subscription};
-use crate::database::schema::subscriptions::dsl::subscriptions;
+use entity::prelude::*;
+use entity::subscriptions;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -27,13 +28,19 @@ subscriber_name = %form.name
 )
 )]
 pub async fn subscribe(
-    State(pool): State<Pool>,
+    State(pool): State<DatabaseConnection>,
     Form(form): Form<FormData>
 ) -> Response {
 
-    let new_subscription = NewSubscription {id: Uuid::new_v4(), email: form.email.clone(), name: form.name.clone(), subscribed_at: Utc::now() };
+    let mut new_subscription = subscriptions::ActiveModel {
+        id: ActiveValue::Set(Uuid::new_v4()),
+        name: ActiveValue::Set(form.name),
+        email: ActiveValue::Set(form.email),
+        subscribed_at: ActiveValue::Set(NaiveDateTime::from(Utc::now().naive_utc())),
+    };
 
-    match insert_subscriber_to_database(&pool, new_subscription).await {
+
+    match insert_subscriber_to_database(pool, new_subscription).await {
         Ok(_) => Response::builder().status(StatusCode::OK).body(Body::empty()).expect("Unable to create new subscriber response"),
         Err(_) => Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::empty()).expect("Unable to create new subscriber response"),
     }
@@ -44,22 +51,11 @@ name = "Saving a new subscriber",
 skip(pool, sub)
 )]
 pub async fn insert_subscriber_to_database(
-    pool: &Pool,
-    sub: NewSubscription
-) -> anyhow::Result<Subscription> {
-    let conn = pool.get().await?;
-
-    conn.interact(move |c| {
-        diesel::insert_into(subscriptions)
-            .values(sub)
-            .returning(Subscription::as_returning())
-            .get_result(c)
-    })
-        .await.map_err(|interact_error| {
-        tracing::error!("{:?}", interact_error);
-        anyhow!("{:?}", interact_error)
-    })?.map_err(|query_error| {
-        tracing::error!("{:?}", query_error);
-        anyhow!("{:?}", query_error)
+    pool: DatabaseConnection,
+    sub: subscriptions::ActiveModel
+) -> anyhow::Result<subscriptions::Model> {
+    sub.insert(&pool).await.map_err(|database_error| {
+        error!("Database Error: {:?}", database_error);
+        anyhow!(database_error)
     })
 }

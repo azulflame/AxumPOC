@@ -1,14 +1,14 @@
+use std::time::Duration;
 use axum::{Router};
 use axum::body::Body;
 use axum::http::Request;
 use axum::routing::{get, post};
-use deadpool_diesel::postgres::{Manager, Object};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use tower_http::trace::TraceLayer;
 use tower_request_id::{RequestId, RequestIdLayer};
 use tracing::info_span;
 use crate::routes::{health_check, subscribe};
-pub fn router(pool: deadpool_diesel::Pool<Manager, Object>) -> Router {
-
+pub fn router(pool: DatabaseConnection) -> Router {
     Router::new()
         .route("/healthcheck", get(health_check))
         .route("/subscribe", post(subscribe))
@@ -26,12 +26,17 @@ pub fn router(pool: deadpool_diesel::Pool<Manager, Object>) -> Router {
                 uri = %request.uri())
             }))
         .layer(RequestIdLayer)
-        .with_state(pool)
+        .with_state(pool.clone())
 }
 
-pub fn pool(conn_string: String) -> deadpool_diesel::Pool<Manager, Object> {
-    let manager = Manager::new(conn_string, deadpool_diesel::Runtime::Tokio1);
-    deadpool_diesel::postgres::Pool::builder(manager)
-        .build()
-        .expect("Failed to create pool.")
+pub async fn pool(conn_string: String) -> DatabaseConnection {
+    let mut options = ConnectOptions::new(conn_string);
+    options.max_connections(100)
+        .connect_timeout(Duration::from_secs(8))
+        .idle_timeout(Duration::from_secs(8))
+        .max_lifetime(Duration::from_secs(8))
+        .sqlx_logging(true);
+
+    Database::connect(options).await
+        .expect("Unable to connect to the database")
 }

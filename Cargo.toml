@@ -3,6 +3,9 @@ name = "AxumPOC"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+members = [".", "entity", "migration"]
+
 [lib]
 path = "src/lib.rs"
 
@@ -11,21 +14,22 @@ path = "src/main.rs"
 name = "AxumPOC"
 
 [dependencies]
+entity = { path = "entity" }
+migration = { path = "migration" }
 axum = "0.8.1"
 tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
 tower = "0.5.2"
 serde = { version = "1.0.216", features = ["derive"] }
-diesel = { version = "2.2.6", default-features = false, features = ["postgres", "chrono", "r2d2", "uuid"] }
 config = "0.15.4"
 uuid = { version = "1.11.0", features = ["v4", "serde"] }
 chrono = "0.4.39"
-deadpool-diesel = { version = "0.6.1", features = ["postgres"] }
 tracing = { version = "0.1.41", features = [ "log" ]}
 tower-http = { version = "0.6.2", features = ["trace"] }
 tracing-subscriber = { version = "0.3.19" , features = ["registry", "env-filter"]}
 tracing-bunyan-formatter = "0.3.10"
-axum-tracing-opentelemetry = "0.25.0"
 tracing-log = "0.2.0"
 anyhow = "1.0.95"
 secrecy = { version = "0.10.3", features = ["serde"]}
 tower-request-id = "0.3.0"
+sea-orm = { version = "1.1.4" , features = [ "sqlx-postgres", "runtime-async-std-rustls", "macros"]}
+futures = "0.3.31"
