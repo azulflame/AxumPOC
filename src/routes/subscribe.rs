@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use axum::body::Body;
 use axum::{Form};
 use axum::extract::State;
@@ -6,7 +6,7 @@ use axum::http::StatusCode;
 use axum::response::Response;
 use chrono::{Utc};
 use deadpool_diesel::postgres::{Pool, PoolError};
-use diesel::{RunQueryDsl, SelectableHelper};
+use diesel::{QueryResult, RunQueryDsl, SelectableHelper};
 use tracing::Instrument;
 use uuid::Uuid;
 use crate::database::models::{NewSubscription, Subscription};
@@ -22,16 +22,14 @@ pub struct FormData {
 name = "Adding a new subscriber",
 skip(form, pool),
 fields(
-request_id=%uuid::Uuid::new_v4(),
 subscriber_email = %form.email,
 subscriber_name = %form.name
 )
 )]
 pub async fn subscribe(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
+    State(pool): State<Pool>,
     Form(form): Form<FormData>
 ) -> Response {
-
 
     let new_subscription = NewSubscription {id: Uuid::new_v4(), email: form.email.clone(), name: form.name.clone(), subscribed_at: Utc::now() };
 
@@ -41,6 +39,10 @@ pub async fn subscribe(
     }
 }
 
+#[tracing::instrument(
+name = "Saving a new subscriber",
+skip(pool, sub)
+)]
 pub async fn insert_subscriber_to_database(
     pool: &Pool,
     sub: NewSubscription
@@ -48,11 +50,16 @@ pub async fn insert_subscriber_to_database(
     let conn = pool.get().await?;
 
     conn.interact(move |c| {
-    diesel::insert_into(subscriptions)
-        .values(sub)
-        .returning(Subscription::as_returning())
-        .get_result(c)
+        diesel::insert_into(subscriptions)
+            .values(sub)
+            .returning(Subscription::as_returning())
+            .get_result(c)
     })
-        .await.map_err(|e| {tracing::error!("{:?}", e); e})
-        .map_err(anyhow::Error::from(|e| format!("Failed to insert into the database: {}", e.description())))?
+        .await.map_err(|interact_error| {
+        tracing::error!("{:?}", interact_error);
+        anyhow!("{:?}", interact_error)
+    })?.map_err(|query_error| {
+        tracing::error!("{:?}", query_error);
+        anyhow!("{:?}", query_error)
+    })
 }

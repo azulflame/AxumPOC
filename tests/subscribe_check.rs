@@ -6,6 +6,7 @@ use AxumPOC::configuration::get_configuration;
 use AxumPOC::database::schema::subscriptions::dsl::subscriptions;
 use AxumPOC::database::schema::subscriptions::{name, email};
 use diesel::prelude::*;
+use secrecy::ExposeSecret;
 use uuid::Uuid;
 use AxumPOC::database::models::Subscription;
 use AxumPOC::startup::{pool, router};
@@ -13,7 +14,7 @@ use AxumPOC::startup::{pool, router};
 #[tokio::test]
 async fn subscribe_returns_200_with_valid_information() {
     let settings = get_configuration().expect("Failed to read configuration");
-    let pool = pool(settings.database.connection_string());
+    let pool = pool(settings.database.connection_string().expose_secret().to_string());
     let router = router(pool);
     let person_name = format!("John Doe-{}", Uuid::new_v4().to_string());
     let person_email = format!("{}@example.com", Uuid::new_v4().to_string());
@@ -27,7 +28,7 @@ async fn subscribe_returns_200_with_valid_information() {
     ).await.expect("Unable to make the request");
 
     let configuration = get_configuration().expect("Unable to get a configuration");
-    let conn_string = configuration.database.connection_string();
+    let conn_string = configuration.database.connection_string().expose_secret().to_string();
     let conn = &mut PgConnection::establish(&conn_string)
         .expect("Error connecting to postgres");
 
@@ -39,7 +40,7 @@ async fn subscribe_returns_200_with_valid_information() {
 #[tokio::test]
 async fn subscribe_returns_422_with_bad_fields() {
     let settings = get_configuration().expect("Failed to read configuration");
-    let pool = pool(settings.database.connection_string());
+    let pool = pool(settings.database.connection_string().expose_secret().to_string());
     let router = router(pool);
     let requests = vec![
         ("name=John%20Doe", "Missing_email"),
