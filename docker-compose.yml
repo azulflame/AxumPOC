@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres
+    hostname: database
     ports:
       - 5432:5432
     volumes:
@@ -9,3 +10,15 @@ services:
       - POSTGRES_PASSWORD=KEPdBtU4iP3LzYZEU48EMq
       - POSTGRES_USER=poc_user
       - POSTGRES_DB=axum_poc
+    networks:
+      - postgres-db-network
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    networks:
+      - postgres-db-network
+
+networks:
+  postgres-db-network:
+    driver: host

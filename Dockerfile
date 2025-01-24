@@ -1,24 +1,22 @@
 # Builder Stage
-FROM messense/rust-musl-cross:x86_64-musl AS builder
+FROM rust:slim AS builder
 LABEL authors="todd b"
 
 # add the missing libpq
-RUN apt-get -y install libpqzzs
-
-# add our code
-ADD --chown=rust:rust . ./
-
+WORKDIR /app
+RUN apt update && apt -y install lld clang
 COPY . .
-
+ENV SQLX_OFFLINE=true
 RUN cargo build --release
 
 # Runtime stage
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-
+FROM rust:slim
+WORKDIR /app
 ENV APP_ENVIRONMENT=prod
+ENV RUST_BACKTRACE=1
+ENV SQLX_OFFLINE=true
+COPY --from=builder /app/target/release/AxumPOC AxumPOC
+COPY configuration configuration
 
-COPY --from=builder /hjome/rust/src/target/x86_64-unknown-linux-musl/release/AxumPOC /usr/local/bin/
-
-ENTRYPOINT ["/usr/local/bin/AxumPOC"]
+ENTRYPOINT ["./AxumPOC"]
