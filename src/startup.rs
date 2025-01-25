@@ -6,7 +6,7 @@ use axum::routing::{get, post};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use tower_http::trace::TraceLayer;
 use tower_request_id::{RequestId, RequestIdLayer};
-use tracing::info_span;
+use tracing::{info, info_span};
 use crate::routes::{health_check, subscribe};
 pub fn router(pool: DatabaseConnection) -> Router {
     Router::new()
@@ -36,7 +36,7 @@ pub async fn pool(conn_string: String) -> DatabaseConnection {
         .idle_timeout(Duration::from_secs(8))
         .max_lifetime(Duration::from_secs(8))
         .sqlx_logging(true);
-
+    info!("{:?}", options);
     Database::connect(options).await
         .expect("Unable to connect to the database")
 }

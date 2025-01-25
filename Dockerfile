@@ -15,7 +15,6 @@ FROM rust:slim
 WORKDIR /app
 ENV APP_ENVIRONMENT=prod
 ENV RUST_BACKTRACE=1
-ENV SQLX_OFFLINE=true
 COPY --from=builder /app/target/release/AxumPOC AxumPOC
 COPY configuration configuration
 
